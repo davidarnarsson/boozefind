@@ -1,0 +1,15 @@
+**/node_modules/
+**/components/
+
+scraper/fixed.json
+scraper/out.txt
+scraper/processed.json
+scraper/products.json
+scraper/test.json
+
+www/test/
+
+www/public/scripts/app-compiled.js
+www/public/scripts/templates.js
+
+

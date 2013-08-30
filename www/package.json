@@ -1,0 +1,22 @@
+{
+  "name": "boozefind-www",
+  "version": "0.0.0",
+  "description": "The web part of boozefind",
+  "main": "index.js",
+  "dependencies": {
+    "mongodb": "~1.3.18",
+    "express": "~3.3.5",
+    "q": "~0.9.6",
+    "bower": "~1.2.4"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.1",
+    "grunt-contrib": "~0.7.0",
+    "grunt-angular-templates": "~0.3.12"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "david arnarsson",
+  "license": "BSD-2-Clause"
+}

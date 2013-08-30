@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="is">
+  <head>
+    <meta charset="utf-8" />
+    <title>ÁTVR leitarvélin sem virkar</title>
+    <link rel="Stylesheet" href="styles/vendor.css">
+    <link rel="Stylesheet" href="styles/app.css">
+  </head>
+
+  <body ng-app="boozefind">
+
+    <div class="container" ng-controller="QueryCtrl">
+      <div class="row">
+        <div class="col-12">
+
+          <h1>Vínleitarvélin  <br/> <small>Leitið, og þér munuð finna!</small></h1>
+          
+          <form class="query-form" name="queryform">
+            <div class="form-group" ng-class="{'has-error': parseResult.error }">
+              <input ng-model="query" class="form-control input-lg query-input" placeholder="Skrifaðu fyrirspurnina þína hér!" />
+              <span class="help-block" ng-bind="parseResult.error"></span>  
+
+              {{ parsedQuery }}
+            </div>
+            
+
+          </form>
+        </div>    
+      </div>
+
+      <results-table query="validQuery" sort="sort">
+      </results-table>
+    </div>
+    
+    <script type="text/javascript" src="scripts/vendor.js"></script>
+    <script type="text/javascript" src="scripts/parser.js"></script>
+    <script type="text/javascript" src="scripts/app-compiled.js"></script>
+  </body>
+</html>

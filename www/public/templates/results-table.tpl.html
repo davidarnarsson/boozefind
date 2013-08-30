@@ -1,0 +1,30 @@
+<table class="table table-striped">
+  <thead>
+    <tr>
+        <th>#</th>
+        <th></th>
+        <th>Titill</th>
+        <th>Lýsing</th>
+        <th>Land</th>
+        <th>Árgangur</th>
+        <th>Styrkleiki</th>
+        <th>Verð</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr ng-repeat="item in booze.products">
+      <td></td>
+      <td>
+        <img ng-src="{{item.img}}" alt="{{item.title}}" />
+      </td>
+      <td>
+        <a href="{{item.link}}" ng-bind="item.title"></a>
+      </td>
+      <td ng-bind="item.description"></td>
+      <td ng-bind="item.country"></td>
+      <td ng-bind="item.year"></td>
+      <td ng-bind="item.volume"></td>
+      <td ng-bind="item.price | currency:'kr.'"></td>
+    </tr>
+  </tbody>
+</table>
