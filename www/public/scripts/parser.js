@@ -33,7 +33,7 @@ var Lexer = (function() {
   };
 
   function Lexer(inputStr) {
-    var ID = /^[a-ö,]+/i
+    var ID = /^[a-ö,&]+/i
     ,   OR = /^eða/i
     ,   AND = /^og/i
     ,   HOMELAND = /^heimalandið/i
