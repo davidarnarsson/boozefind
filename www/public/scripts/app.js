@@ -43,20 +43,94 @@
 
       timeoutId = $timeout(function() {
         if(val && val.length) {  
-          $scope.parseResult = parser.parse(val);
+          $scope.results = parser.parse(val);
 
-          if(!$scope.parseResult.error) {
-            $scope.validQuery = $scope.parseResult.parsed;  
-            $scope.sort = $scope.parseResult.sort;
+          $scope.$broadcast('newresults', {results: $scope.results});
+
+          if(!$scope.results.error) {
+            $scope.validQuery = $scope.results.parsed;
           }
-
-          $scope.parsedQuery = JSON.stringify($scope.parseResult.parsed);            
         }
-      }, 1000);
+      }, 50);
     });
   });
 
- 
+  booze.directive('onKeyup', function() {
+    return function(scope, elm, attrs) {
+      var keyupFn = scope.$eval(attrs.onKeyup);
+      elm.bind("keyup", function(evt) {
+        scope.$apply(function() {
+          keyupFn.call(this, evt);
+        });
+      });
+    };
+  });
+
+  booze.directive('queryInput', function($booze) {
+    return {
+      restrict: 'E',
+
+      templateUrl: 'query-input.tpl.html',
+
+      scope: {
+        query : '='
+      },
+
+      controller: function($scope, $element, $attrs) {
+        var currentSuggestion = '';
+        $scope.$watch('query', function(val) {
+          if(!val) {
+            $element.find('.suggestions').text('');
+          }
+        });
+
+        $scope.keyUp = function(event) {
+          if (event.which === 39 && currentSuggestion && currentSuggestion.length) {
+            $scope.query = $scope.query + currentSuggestion;
+            currentSuggestion = '';
+          }
+        }
+
+        $scope.$on('newresults', function(event, args) {
+          var words = $scope.query.split(' ')
+          , compls = args.results.completionContext;
+
+          if(words.length && compls && compls.length) {
+            var lastWord = words[words.length - 1]
+            , r = new RegExp('^' + lastWord, "i")
+            , i = 0;
+            for( ; i < compls.length; ++i) {
+              if(r.test(compls[i])) {
+                currentSuggestion = compls[i].substring(lastWord.length);
+                $element.find('.suggestions').text($scope.query + currentSuggestion);    
+                break;
+              }
+            }
+
+            if(i === compls.length) {
+              $element.find('.suggestions').text('');
+            }
+          }
+        });
+      }
+    }
+  });
+
+
+/*  booze.directive('suggestionsList', function() {
+    return {
+      restrict: 'E',
+      require: '^queryInputCtrl',
+
+      templateUrl: 'suggestions-list.tpl.html',
+
+      transclude: true,
+
+      link: function(scope, element, attrs, queryInputCtrl) {
+
+      }
+    };
+  });*/
 
   booze.directive('resultsTable', function($booze) {
     return {

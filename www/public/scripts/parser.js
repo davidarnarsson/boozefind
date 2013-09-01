@@ -5,12 +5,25 @@ var tc_ID = 'ID'
 , tc_HOMELAND = 'HOMELAND'
 , tc_IS = 'IS'
 , tc_EOF = 'EOF'
-, tc_COMMA = 'COMMA'
+, tc_SEMICOMMA = 'SEMICOMMA'
 , tc_ORDER = 'ORDER'
 , tc_DESC = 'DESC'
 , tc_BY = 'BY'
-, tc_DBLQUOTE = 'DBLQUOTE';
+, tc_CATEGORY = 'CATEGORY'
+, tc_DBLQUOTE = 'DBLQUOTE'
+, tc_GOES = 'GOES'
+, tc_WITH = 'WITH';
 
+Object.values = function(obj) {
+  var arr = [];
+
+  if(obj && obj.length) {
+    for(var key in obj) {
+      arr.push(obj[key]);
+    }  
+  }
+  return arr;
+}
 
 var Lexer = (function() { 
 
@@ -20,22 +33,25 @@ var Lexer = (function() {
   };
 
   function Lexer(inputStr) {
-    var ID = /^[a-ö]+/i
+    var ID = /^[a-ö,]+/i
     ,   OR = /^eða/i
     ,   AND = /^og/i
     ,   HOMELAND = /^heimalandið/i
     ,   IS = /^er/i
     ,   WHITESPACE = /^[\s]+/im
-    ,   COMMA = /^,/i
+    ,   SEMICOMMA = /^;/i
+    ,   CATEGORY = /^tegundin/i
     ,   ORDER = /^raðað/i
     ,   DESC = /^öfugt/i
     ,   BY = /^eftir/i
-    ,   DBLQUOTE = /^"/;
+    ,   DBLQUOTE = /^"/
+    ,   GOES = /^hentar/i
+    ,   WITH = /^með/i;
     
     var tokens = []
-      , reserved = ['eða', 'og', 'er', 'heimalandið', 'raðað', 'eftir', 'öfugt', '"']
+      , reserved = ['eða', 'og', 'er',';', 'heimalandið', 'raðað', 'eftir', 'öfugt', '"', 'tegundin', 'hentar', 'með']
       , consumed = 0
-      , funcs = [idToken, whiteSpace, orToken, andToken, homelandToken, isToken, commaToken, orderToken, descToken, byToken, dblQuoteToken]; 
+      , funcs = [idToken, whiteSpace, orToken, andToken, homelandToken, isToken, commaToken, orderToken, descToken, byToken, dblQuoteToken, goesToken, withToken, categoryToken]; 
 
     var lex = function() {
       try {
@@ -130,7 +146,7 @@ var Lexer = (function() {
     }
 
     function commaToken() {
-      return valueless(COMMA, tc_COMMA);
+      return valueless(SEMICOMMA, tc_SEMICOMMA);
     }
 
     function orderToken() {
@@ -145,6 +161,18 @@ var Lexer = (function() {
       return valueless(DBLQUOTE, tc_DBLQUOTE);
     }
 
+    function categoryToken() {
+      return valueless(CATEGORY, tc_CATEGORY);
+    }
+
+    function goesToken() {
+      return valueless(GOES, tc_GOES);
+    }
+
+    function withToken() {
+      return valueless(WITH, tc_WITH);
+    }
+
     return {
       lex: lex
     };
@@ -156,16 +184,17 @@ var Lexer = (function() {
 /**
 
   expr := statement statementMore orderBy
-  statement := country | category 
+  statement := country | category | goesWith
   statementMore := 'og' expr | 'eða' expr | epsilon
-  country := 'Kemur frá' idStart
-  idStart = ID idList
+  country := 'Kemur frá' idListStart
+  idListStart = ID idList
   idList := ',' ID idList idListLast | epsilon
   idListLast := 'eða' ID 
-  category := 'Er' idStart
+  category := 'tegundin' 'er' idListStart
+  goesWith := 'goes' 'with' idListStart
   orderBy: 'raðað' DESC 'eftir' ID | epsilon
   desc := 'öfugt' | epsilon
-  ID := /[a-ö]/i | " /[a-ö ]/i "
+  ID := /[a-ö,]/i ID | epsilon 
 */
 
 var Parser = (function () {
@@ -176,12 +205,29 @@ var Parser = (function () {
       countries: ['Ísland', 'Bretland']
     });
 
+    /* inflection : property name */ 
     var fields = {
       'verði' : 'price',
       'nafni' : 'title',
       'heimalandi' : 'country',
       'árgangi' : 'year',
       'styrkleika' : 'volume'
+    }
+
+    , goesWith = {
+      'nauti' : 'naut',
+      'lambi' : 'lamb',
+      'grillmat' : 'grill',
+      'léttari villibráð' : 'lettariVillibrad',
+      'svínakjöti' : 'gris',
+      'fiski' : 'fiskur',
+      'skelfiski' : 'skelfiskur',
+      'osti' : 'ostur',
+      'villibráð' : 'villibrad',
+      'alifuglum' : 'alifuglar',
+      'pasta': 'pasta',
+      'grænmeti' : 'graenmeti',
+      'eftirréttum' : 'eftirrettir'
     }
     , outObj = {}
     , tokens = []
@@ -227,7 +273,7 @@ var Parser = (function () {
       parseOrderBy();
     }
 
-    function parseIdStart(completions, compareFunc, valueName) {
+    function parseIdStart(completions, compareFunc, valueName, codeGenFunc) {
       idListStack = [];
       var token = parseId();
 
@@ -235,56 +281,62 @@ var Parser = (function () {
 
       idListStack.push(value);
 
-      parseIdList(completions, compareFunc, valueName);
+      parseIdList(completions, compareFunc, valueName, codeGenFunc);
     }
 
-    function parseIdList(completion, compareFunc, valueName) {
+    function parseIdList(completions, compareFunc, valueName, codeGenFunc) {
       var token = lookahead();
-
-      if(token.code === tc_COMMA) {
+      //currentCompletion = [';', 'og', 'eða'];
+      if(token.code === tc_SEMICOMMA) {
         getToken();
         
         var str = parseId();
 
-        var value = parseIdCompletion(str, completion, compareFunc);
+        var value = parseIdCompletion(str, completions, compareFunc);
 
         idListStack.push(value);
 
-        parseIdList(completion, compareFunc, valueName);
+        parseIdList(completions, compareFunc, valueName, codeGenFunc);
         
       } else {
-        parseIdListLast(completion, compareFunc, valueName);
+        parseIdListLast(completions, compareFunc, valueName, codeGenFunc);
       }
     }
 
-    function parseIdListLast(completion, compareFunc, valueName) {
+    function parseIdListLast(completions, compareFunc, valueName, codeGenFunc) {
 
-      var token = lookahead();
+      var token = lookahead(), predicate = '$or';
 
-      if(token.code === tc_OR) {
+      if(token.code === tc_OR || token.code === tc_AND) {
         getToken();
         var id = parseId();
-        var value = parseIdCompletion(id, completion, compareFunc);
+        var value = parseIdCompletion(id, completions, compareFunc);
         idListStack.push(value);
+
+        if(token.code === tc_AND) {
+          predicate = '$and';
+        }
       }
 
-      outObj['$or'] = outObj['$or'] || [];
+      outObj[predicate] = outObj[predicate] || [];
 
-      idListStack.map(function(val) {
-        var n = {};
-        n[valueName] = val;
-        outObj['$or'].push(n);
-      });
+      if(!codeGenFunc) {
+        idListStack.map(function(val) {
+          var n = {};
+          n[valueName] = val;
+          outObj[predicate].push(n);
+        });  
+      } else {
+        codeGenFunc(idListStack, outObj[predicate]);
+      }
     }
 
     function parseId() {
 
-      var token = lookahead(), str = [], openQuote = false;
+      var token = lookahead(), str = [];
 
-      if (token.code === tc_DBLQUOTE) {
-        openQuote = true; 
-        getToken();
-        token = lookahead();
+      if(token.code !== tc_ID) {
+        throw 'Hér bjóst ég við einhverju gildi!';
       }
 
       while(token.code === tc_ID) {
@@ -294,24 +346,18 @@ var Parser = (function () {
         token = lookahead();
       }
 
-      if (openQuote && token.code === tc_DBLQUOTE) {
-        getToken();
-      }
-      else if (openQuote) {
-        throw "Hér vantar að loka gæsalöppunum!";
-      }
-
       return str.join(' ');
     }
 
     function parseIdCompletion(token, completions, compareFunc) {
       var completion = null; 
 
-      currentCompletion = completions;
+      
 
       if((completion = getCompletion(token, completions, compareFunc)) != null) {
         return completion;
       } else {
+        currentCompletion = completions;
         throw 'Hér vil ég sjá gilt gildi! ' + (token ? token : 'Tómt gildi') + ' er ekki gilt!';
       }
     }
@@ -322,10 +368,13 @@ var Parser = (function () {
       
       if(next.code === tc_HOMELAND) {
         parseCountry();
-      } else if (next.code === tc_IS) {
+      } else if (next.code === tc_CATEGORY) {
         parseCategory();
+      } else if (next.code === tc_GOES) {
+        parseGoesWith();
       } else {
-        throw "Hér vil ég sjá annað hvort 'heimalandið' eða 'er'!";
+        currentCompletion = ['heimalandið', 'tegundin', 'hentar'];
+        throw "Hér vil ég sjá annað hvort 'heimalandið er', 'tegundin er', eða 'hentar með'!";
       }
     }
 
@@ -333,7 +382,7 @@ var Parser = (function () {
     function parseStatementMore() {
 
       var token = lookahead();
-
+      
       if(token.code === tc_AND || token.code === tc_OR) {
         getToken();
 
@@ -342,7 +391,9 @@ var Parser = (function () {
         outObj = newObj;
 
         parseExpression();
-
+      } else if (token.code !== tc_EOF) {
+        currentCompletion = ['og', 'eða'];
+        throw "Hér þarf annaðhvort að vera 'og', 'eða', eða ekki neitt!";
       }
     }
 
@@ -352,8 +403,11 @@ var Parser = (function () {
         throw ("Þetta á ekki að vera hægt?");
       
       token = getToken();
-      if (token.code !== tc_IS) 
+      if (token.code !== tc_IS) {
+        currentCompletion = ['er'];
         throw ("hér vantar 'er'!");
+      }
+        
       var compare = function(completion, str) {  return completion.toLowerCase() === str.replace(/(i|u)$/, '').toLowerCase() };
       
       parseIdStart(completions.countries, compare, 'country');
@@ -362,8 +416,37 @@ var Parser = (function () {
     function parseCategory() {
       getToken();
 
+      var token = getToken();
+
+      if(token.code !== tc_IS) {
+        currentCompletion = ['er'];
+        throw 'Til þess að leita eftir tegund þarf að skrifa "tegundin ER [nafn á tegund]".';
+      }
+
       parseIdStart(completions.categories, null, 'category');
     }
+
+
+    function parseGoesWith() {
+      getToken();
+      
+      //currentCompletion = ;
+      var token = getToken();
+
+      if(token.code !== tc_WITH) {
+        currentCompletion = ['með'];
+        throw 'Hér vantar "með"!';
+      }
+
+      parseIdStart(Object.keys(goesWith), null, null, function(idArr, outObj) {
+        idArr.forEach(function(val) {
+          var obj = {};
+          obj[goesWith[val]] = true;
+          outObj.push(obj);
+        });
+      });
+    }
+
 
     function parseOrderBy() {
       var token = lookahead();
@@ -372,6 +455,7 @@ var Parser = (function () {
         getToken();
         token = getToken(); 
 
+        currentCompletion = Object.values(fields).concat(['öfugt']);
         var order = 1;
         if(token.code === tc_DESC) {
           order = -1;
@@ -379,18 +463,21 @@ var Parser = (function () {
         }
 
         if(token.code !== tc_BY) {
+          currentCompletion = ['eftir'];
           throw "Hér vantar orðið 'eftir'!";
         }
 
         token = getToken();
 
         if(token.code !== tc_ID) {
+          currentCompletion = Object.values(fields)
           throw "Hér vantar eitthvað gildi, t.d. 'nafni', eða 'verði'";
         }
 
         var sortExpression = fields[token.value.toLowerCase()];
 
         if(!sortExpression) {
+          currentCompletion = Object.values(fields)
           throw "Ég kannast ekki við röðunargilið " + token.value + "!";
         }
 
@@ -398,6 +485,7 @@ var Parser = (function () {
       } else if (token.code === tc_EOF) {
         return;
       } else {
+        currentCompletion = ['raðað'];
         throw "Hér vil ég sjá 'raðað eftir' eða ekki neitt!";
       }
     }
@@ -405,7 +493,14 @@ var Parser = (function () {
     function getCompletion(str, completions, compareFunc) {
 
       if(!compareFunc) {
-        compareFunc = function(completion, str) { return completion.toLowerCase() === str.toLowerCase() };
+        compareFunc = function(completion, str) {
+          if (typeof completion === "Object") {
+            return !!completion[str];
+          } else {
+            return completion.toLowerCase() === str.toLowerCase()   
+          }
+          
+       };
       }
 
       var completion = completions[0], i = 0; 

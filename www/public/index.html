@@ -10,28 +10,22 @@
   <body ng-app="boozefind">
 
     <div class="container" ng-controller="QueryCtrl">
-      <div class="row">
+      <div class="row ">
         <div class="col-12">
 
           <h1>Vínleitarvélin  <br/> <small>Leitið, og þér munuð finna!</small></h1>
           
-          <form class="query-form" name="queryform">
-            <div class="form-group" ng-class="{'has-error': parseResult.error }">
-              <input ng-model="query" class="form-control input-lg query-input" placeholder="Skrifaðu fyrirspurnina þína hér!" />
-              <span class="help-block" ng-bind="parseResult.error"></span>  
-
-              {{ parsedQuery }}
-            </div>
-            
-
-          </form>
+          <query-input query="query" />
+         
         </div>    
       </div>
-
+    
       <results-table query="validQuery" sort="sort">
       </results-table>
+      
     </div>
-    
+    <div id="measure" style="position:absolute; visibility:hidden">
+    </div>
     <script type="text/javascript" src="scripts/vendor.js"></script>
     <script type="text/javascript" src="scripts/parser.js"></script>
     <script type="text/javascript" src="scripts/app-compiled.js"></script>

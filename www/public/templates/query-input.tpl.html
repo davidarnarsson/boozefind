@@ -1,0 +1,12 @@
+<form class="query-form" name="queryform">
+  <div class="form-group query-container" ng-class="{'has-error': parseResults.error }">
+    <input ng-model="query" on-keyup="keyUp" class="form-control input-lg query-input" placeholder="Skrifaðu fyrirspurnina þína hér!" />
+    <span class="help-block" ng-bind="parseResults.error"></span>  
+
+    <div class="suggestions">
+
+    </div>
+  </div>
+  
+
+</form>
