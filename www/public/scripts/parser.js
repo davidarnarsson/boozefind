@@ -8,7 +8,8 @@ var tc_ID = 'ID'
 , tc_COMMA = 'COMMA'
 , tc_ORDER = 'ORDER'
 , tc_DESC = 'DESC'
-, tc_BY = 'BY';
+, tc_BY = 'BY'
+, tc_DBLQUOTE = 'DBLQUOTE';
 
 
 var Lexer = (function() { 
@@ -28,12 +29,13 @@ var Lexer = (function() {
     ,   COMMA = /^,/i
     ,   ORDER = /^raðað/i
     ,   DESC = /^öfugt/i
-    ,   BY = /^eftir/i;
+    ,   BY = /^eftir/i
+    ,   DBLQUOTE = /^"/;
     
     var tokens = []
-      , reserved = ['eða', 'og', 'er', 'heimalandið', 'raðað', 'eftir', 'öfugt']
+      , reserved = ['eða', 'og', 'er', 'heimalandið', 'raðað', 'eftir', 'öfugt', '"']
       , consumed = 0
-      , funcs = [idToken, whiteSpace, orToken, andToken, homelandToken, isToken, commaToken, orderToken, descToken, byToken]; 
+      , funcs = [idToken, whiteSpace, orToken, andToken, homelandToken, isToken, commaToken, orderToken, descToken, byToken, dblQuoteToken]; 
 
     var lex = function() {
       try {
@@ -139,6 +141,10 @@ var Lexer = (function() {
       return valueless(BY, tc_BY);
     }
 
+    function dblQuoteToken() {
+      return valueless(DBLQUOTE, tc_DBLQUOTE);
+    }
+
     return {
       lex: lex
     };
@@ -159,7 +165,7 @@ var Lexer = (function() {
   category := 'Er' idStart
   orderBy: 'raðað' DESC 'eftir' ID | epsilon
   desc := 'öfugt' | epsilon
-  ID := /[a-ö]/i
+  ID := /[a-ö]/i | " /[a-ö ]/i "
 */
 
 var Parser = (function () {
@@ -223,7 +229,7 @@ var Parser = (function () {
 
     function parseIdStart(completions, compareFunc, valueName) {
       idListStack = [];
-      var token = getToken();
+      var token = parseId();
 
       var value = parseIdCompletion(token, completions, compareFunc);
 
@@ -237,9 +243,10 @@ var Parser = (function () {
 
       if(token.code === tc_COMMA) {
         getToken();
-        token = getToken();
+        
+        var str = parseId();
 
-        var value = parseIdCompletion(token, completion, compareFunc);
+        var value = parseIdCompletion(str, completion, compareFunc);
 
         idListStack.push(value);
 
@@ -256,8 +263,8 @@ var Parser = (function () {
 
       if(token.code === tc_OR) {
         getToken();
-        token = getToken();
-        var value = parseIdCompletion(token, completion, compareFunc);
+        var id = parseId();
+        var value = parseIdCompletion(id, completion, compareFunc);
         idListStack.push(value);
       }
 
@@ -270,15 +277,42 @@ var Parser = (function () {
       });
     }
 
+    function parseId() {
+
+      var token = lookahead(), str = [], openQuote = false;
+
+      if (token.code === tc_DBLQUOTE) {
+        openQuote = true; 
+        getToken();
+        token = lookahead();
+      }
+
+      while(token.code === tc_ID) {
+        str.push(token.value);
+        getToken();
+
+        token = lookahead();
+      }
+
+      if (openQuote && token.code === tc_DBLQUOTE) {
+        getToken();
+      }
+      else if (openQuote) {
+        throw "Hér vantar að loka gæsalöppunum!";
+      }
+
+      return str.join(' ');
+    }
+
     function parseIdCompletion(token, completions, compareFunc) {
       var completion = null; 
 
       currentCompletion = completions;
 
-      if(token.code === tc_ID && (completion = getCompletion(token.value, completions, compareFunc)) != null) {
+      if((completion = getCompletion(token, completions, compareFunc)) != null) {
         return completion;
       } else {
-        throw 'Hér vil ég sjá gilt gildi! ' + (token.value ? token.value : 'Tómt gildi') + ' er ekki gilt!';
+        throw 'Hér vil ég sjá gilt gildi! ' + (token ? token : 'Tómt gildi') + ' er ekki gilt!';
       }
     }
 
@@ -345,7 +379,6 @@ var Parser = (function () {
         }
 
         if(token.code !== tc_BY) {
-          console.log(token);
           throw "Hér vantar orðið 'eftir'!";
         }
 

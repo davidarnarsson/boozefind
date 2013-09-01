@@ -10,6 +10,6 @@
   "dependencies": {
     "angular-ui-select2": "~0.0.2",
     "angular": "1.0.7",
-    "bootstrap": "~3.0.0"
+    "bootstrap": "3.0.0"
   }
 }
