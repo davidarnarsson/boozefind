@@ -94,7 +94,7 @@
         $scope.$on('newresults', function(event, args) {
           var words = $scope.query.split(' ')
           , compls = args.results.completionContext;
-
+          $scope.error = args.results.error;
           if(words.length && compls && compls.length) {
             var lastWord = words[words.length - 1]
             , r = new RegExp('^' + lastWord, "i")
@@ -143,17 +143,16 @@
         sort: '='
       },
       controller : function($scope, $element, $attrs) {
-        var init = true;
-        $scope.$watch('boozeQuery', function(val) {
-          if(init) {
-            init = false;
-          } else {
-            $booze.search(0, val, ($scope.sort || {})).then(function(items) {
+        
+        $scope.$on('newresults', function(event, args) {
+          var results = args.results;
+          if(!results.error) {
+            $booze.search(0, results.parsed, results.sort).then(function(items) {
               console.log(items);
               $scope.booze = items.data;
-            });
+            });  
           }
-        }) 
+        });
       }
     };
   });

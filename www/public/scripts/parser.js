@@ -263,8 +263,13 @@ var Parser = (function () {
       return tokens.shift();
     }
 
-    function lookahead() {
-      return tokens[0];
+
+    /**
+      e.g. lookahead(2) returns tokens[1]
+    */ 
+    function lookahead(n) {
+      if(!n) n = 1;
+      return tokens[n - 1];
     }
 
     function parseExpression() {
@@ -278,7 +283,7 @@ var Parser = (function () {
       var token = parseId();
 
       var value = parseIdCompletion(token, completions, compareFunc);
-
+      console.log('value is ', value);
       idListStack.push(value);
 
       parseIdList(completions, compareFunc, valueName, codeGenFunc);
@@ -294,6 +299,7 @@ var Parser = (function () {
 
         var value = parseIdCompletion(str, completions, compareFunc);
 
+        console.log('value is ', value);
         idListStack.push(value);
 
         parseIdList(completions, compareFunc, valueName, codeGenFunc);
@@ -305,13 +311,20 @@ var Parser = (function () {
 
     function parseIdListLast(completions, compareFunc, valueName, codeGenFunc) {
 
-      var token = lookahead(), predicate = '$or';
+      var token = lookahead(), predicate = '$or', next = lookahead(2);
 
-      if(token.code === tc_OR || token.code === tc_AND) {
+      if(token.code === tc_OR || token.code === tc_AND && next.code === tc_ID) {
         getToken();
+        
         var id = parseId();
         var value = parseIdCompletion(id, completions, compareFunc);
-        idListStack.push(value);
+        if(value && value.length) {
+          idListStack.push(value);  
+        } else {
+          currentCompletion = completions;
+          throw (value + ' er ekki gilt gildi! Möguleg gildi eru ' + completions.join(', '));
+        }
+        
 
         if(token.code === tc_AND) {
           predicate = '$and';
@@ -358,7 +371,7 @@ var Parser = (function () {
         return completion;
       } else {
         currentCompletion = completions;
-        throw 'Hér vil ég sjá gilt gildi! ' + (token ? token : 'Tómt gildi') + ' er ekki gilt!';
+        throw (token + ' er ekki gilt gildi! Möguleg gildi eru ' + completions.join(', '));
       }
     }
 
@@ -391,9 +404,9 @@ var Parser = (function () {
         outObj = newObj;
 
         parseExpression();
-      } else if (token.code !== tc_EOF) {
-        currentCompletion = ['og', 'eða'];
-        throw "Hér þarf annaðhvort að vera 'og', 'eða', eða ekki neitt!";
+      } else if (token.code !== tc_EOF && token.code !== tc_ORDER) {
+        currentCompletion = ['og', 'eða', 'raðað'];
+        throw "Hér þarf annaðhvort að vera 'og', 'eða', 'raðað' eða ekki neitt!";
       }
     }
 
@@ -455,7 +468,7 @@ var Parser = (function () {
         getToken();
         token = getToken(); 
 
-        currentCompletion = Object.values(fields).concat(['öfugt']);
+        currentCompletion = Object.keys(fields).concat(['öfugt']);
         var order = 1;
         if(token.code === tc_DESC) {
           order = -1;
@@ -470,14 +483,14 @@ var Parser = (function () {
         token = getToken();
 
         if(token.code !== tc_ID) {
-          currentCompletion = Object.values(fields)
+          currentCompletion = Object.keys(fields)
           throw "Hér vantar eitthvað gildi, t.d. 'nafni', eða 'verði'";
         }
 
         var sortExpression = fields[token.value.toLowerCase()];
 
         if(!sortExpression) {
-          currentCompletion = Object.values(fields)
+          currentCompletion = Object.keys(fields)
           throw "Ég kannast ekki við röðunargilið " + token.value + "!";
         }
 
