@@ -299,7 +299,6 @@ var Parser = (function () {
 
         var value = parseIdCompletion(str, completions, compareFunc);
 
-        console.log('value is ', value);
         idListStack.push(value);
 
         parseIdList(completions, compareFunc, valueName, codeGenFunc);
@@ -421,9 +420,9 @@ var Parser = (function () {
         throw ("hér vantar 'er'!");
       }
         
-      var compare = function(completion, str) {  return completion.toLowerCase() === str.replace(/(i|u)$/, '').toLowerCase() };
+      //var compare = function(completion, str) {  return completion.toLowerCase() === str.replace(/(i|u)$/, '').toLowerCase() };
       
-      parseIdStart(completions.countries, compare, 'country');
+      parseIdStart(completions.countries, null, 'country');
     }
 
     function parseCategory() {
